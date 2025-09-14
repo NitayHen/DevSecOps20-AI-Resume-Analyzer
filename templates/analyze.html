@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">Analyze your resume against a job description</h4>
+        <form method="post" action="{{ url_for('analyze') }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label">Upload your Resume/CV (PDF)</label>
+            <input class="form-control" type="file" name="resume_pdf" accept="application/pdf" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Job Description</label>
+            <textarea class="form-control" name="job_desc" rows="10" placeholder="Paste the job description here..." required></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">Analyze</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 d-none d-lg-block">
+    <div class="p-4">
+      <h5 class="text-secondary">How it works</h5>
+      <ol class="small">
+        <li>We extract text from your PDF resume.</li>
+        <li>We compute a semantic similarity score (BERT/SBERT).</li>
+        <li>We ask the LLM (Groq) for a structured analysis with point-by-point scores.</li>
+        <li>You’ll see the similarity score, AI average score, and a downloadable report.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}

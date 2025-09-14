@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-2">Similarity Score (ATS-style)</h5>
+
+        {# --- Map similarity to a label + color --- #}
+
+        {% if similarity_score >= 0.90 %}
+          {% set match_label = "Perfect match" %}
+          {% set match_class = "badge bg-success" %}
+        {% elif similarity_score >= 0.75 %}
+          {% set match_label = "Strong match" %}
+          {% set match_class = "badge bg-success" %}
+        {% elif similarity_score >= 0.60 %}
+          {% set match_label = "Good match" %}
+          {% set match_class = "badge bg-primary" %}
+        {% elif similarity_score >= 0.40 %}
+          {% set match_label = "Fair match" %}
+          {% set match_class = "badge bg-warning text-dark" %}
+        {% else %}
+          {% set match_label = "Weak match" %}
+          {% set match_class = "badge bg-danger" %}
+        {% endif %}
+
+        <div class="d-flex align-items-center gap-2">
+          <p class="fs-4 mb-0">{{ "%.4f"|format(similarity_score) }}</p>
+          <span class="{{ match_class }}">{{ match_label }}</span>
+        </div>
+
+        <p class="text-secondary small mt-2">
+          This is the cosine similarity of SBERT embeddings (all-mpnet-base-v2).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-2">AI-Groq's Match Score</h5>
+        <p class="fs-4">{{ "%d"|format(avg_score*100) }}%</p>
+        <p class="text-secondary small">
+          Computed from all “x/10” scores found in the report.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+  <div class="card-body">
+    <h5 class="mb-3">AI Generated Analysis Report</h5>
+    <div class="p-3 rounded bg-black text-white" style="white-space: pre-wrap;">{{ report }}</div>
+    <form class="mt-3" method="post" action="{{ url_for('download') }}">
+      <input type="hidden" name="report_text" value="{{ report|e }}">
+      <button type="submit" class="btn btn-outline-light">Download Report</button>
+      <a href="{{ url_for('analyze') }}" class="btn btn-secondary ms-2">Analyze another</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
