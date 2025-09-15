@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10 col-xl-9">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h4 class="mb-0">Refined Resume</h4>
+          <div class="d-flex gap-2">
+            <button id="copyBtn" type="button" class="btn btn-outline-secondary btn-sm">Copy</button>
+            <form method="post" action="{{ url_for('download') }}" class="d-inline">
+              <input type="hidden" name="report_text" value="{{ refined_resume|e }}">
+              <button class="btn btn-primary btn-sm" type="submit">Download</button>
+            </form>
+            <a href="{{ url_for('analyze') }}" class="btn btn-light btn-sm">Back</a>
+          </div>
+        </div>
+
+        <!-- Readable container with proper contrast -->
+        <div id="resumeView" class="resume-view">
+{{ refined_resume }}
+        </div>
+
+        <div class="small text-muted mt-3">
+          Tip: Copy and paste into your editor, then tailor the top summary to the exact role title.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const btn = document.getElementById('copyBtn');
+    const el  = document.getElementById('resumeView');
+    if (!btn || !el) return;
+    btn.addEventListener('click', async () => {
+      try {
+        const text = el.innerText; // preserves line breaks
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied!';
+        setTimeout(() => (btn.textContent = 'Copy'), 1500);
+      } catch (e) {
+        btn.textContent = 'Copy failed';
+        setTimeout(() => (btn.textContent = 'Copy'), 1500);
+      }
+    });
+  })();
+</script>
+{% endblock %}
