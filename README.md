@@ -5,7 +5,7 @@ Flask app for analyzing resumes with AI and MongoDB.
 
 ```bash
 # clone repo
-git clone https://github.com/<your-username>/DevSecOps20-AI-Resume-Analyzer.git
+git clone https://github.com/NitayHen/DevSecOps20-AI-Resume-Analyzer.git
 cd DevSecOps20-AI-Resume-Analyzer
 
 # create venv
