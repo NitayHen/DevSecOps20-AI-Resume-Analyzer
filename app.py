@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, send_file
+from flask import Flask, render_template, redirect, url_for, request, flash, session, send_file
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash #hashing passwords + verification
 from pymongo import MongoClient #connect to MongoDB
@@ -92,7 +92,7 @@ def get_sentence_model():
     global _ats_model #accessing the global variable
     if _ats_model is None:
         _ats_model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
-    return _ats_model #sentenceTransformer is used to convert sentences to vectors to quantify similarity
+    return _ats_model #sentencetransformer is used to convert sentences to vectors to quantify similarity
 
 def calculate_similarity_bert(text1, text2):
     model = get_sentence_model()
@@ -195,12 +195,13 @@ def logout(): #disconnects user session, return /login
     flash("Logged out.", "info")
     return redirect(url_for("login"))
 
-@app.route("/analyze", methods=["GET","POST"])
+@app.route("/analyze", methods=["GET", "POST"])
 @login_required
 def analyze():
     if request.method == "POST":
-        job_desc = request.form.get("job_desc","").strip()
+        job_desc = request.form.get("job_desc", "").strip()
         resume_file = request.files.get("resume_pdf")
+
         if not job_desc or not resume_file:
             flash("Please upload a PDF resume and enter a job description.", "warning")
             return redirect(url_for("analyze"))
@@ -217,18 +218,84 @@ def analyze():
         # LLM Report
         report = get_report(resume_text, job_desc)
         scores = extract_scores(report)
-        avg_score = round(sum(scores) / (10 * len(scores)), 4) if scores else 0.0
+        avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
 
-        # Keep values in session for the download endpoint
-        request.session = {}  # simple container if needed
-        # Alternatively, pass via querystring or server cache; we'll pass via render + hidden field
-        return render_template(
-            "result.html",
-            similarity_score=similarity_score,
-            avg_score=avg_score,
-            report=report
-        )
+        # Save to session for /result
+        session["similarity_score"] = similarity_score
+        session["avg_score"] = avg_score
+        session["report"] = report
+        session["resume_text"] = resume_text
+
+        return redirect(url_for("result"))
+
     return render_template("analyze.html")
+
+
+@app.route("/result")
+@login_required
+def result():
+    similarity_score = session.get("similarity_score")
+    avg_score = session.get("avg_score")
+    report = session.get("report")
+    resume_text = session.get("resume_text")
+
+    if not report:
+        flash("No analysis found. Please upload a resume first.", "warning")
+        return redirect(url_for("analyze"))
+
+    return render_template(
+        "result.html",
+        similarity_score=similarity_score,
+        avg_score=avg_score,
+        report=report,
+        resume_text=resume_text
+    )
+
+
+
+@app.post("/refine")
+@login_required
+def refine():
+    resume_text = request.form.get("resume_text", "")
+    feedback_text = request.form.get("feedback_text", "")
+
+    if not resume_text or not feedback_text:
+        flash("Resume text and feedback are required to refine.", "warning")
+        return redirect(url_for("analyze"))
+
+    client = Groq(api_key=GROQ_API_KEY)
+    prompt = f"""
+You are an expert resume writer and career coach.
+Refine and rewrite the candidate's resume using the feedback below so it better fits the job description.
+Keep a professional, concise tone. Use strong bullet points with measurable impact where possible.
+Return ONLY the refined resume (no extra commentary).
+Do not use asterisks (*) anywhere in the output (no Markdown bullets). Use plain text with line breaks.
+
+
+# Candidate Resume:
+{resume_text}
+
+---
+# Feedback from AI Resume Analyzer:
+{feedback_text}
+
+# Output:
+Refined resume (plain text or markdown). 
+"""
+
+    try:
+        chat_completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        refined_resume = chat_completion.choices[0].message.content.strip()
+    except Exception as e:
+        flash(f"Resume refinement failed: {e}", "danger")
+        return redirect(url_for("analyze"))
+
+    return render_template("refined.html", refined_resume=refined_resume)
+
+
 
 @app.post("/download")
 @login_required
@@ -246,4 +313,4 @@ def download():
     )
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)
